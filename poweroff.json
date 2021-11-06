@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Lock screen",
+    "exec": "slock",
+    "icon": "system-lock-screen"
+  },
+  {
+    "name": "Logout",
+    "exec": "killall dwm",
+    "icon": "system-log-out"
+  },
+  {
+    "name": "Reboot",
+    "exec": "reboot",
+    "icon": "system-reboot"
+  },
+  {
+    "name": "Shutdown",
+    "exec": "poweroff",
+    "icon": "system-shutdown"
+  }
+]
+
