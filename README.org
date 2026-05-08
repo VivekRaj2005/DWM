@@ -1,0 +1,212 @@
+#+TITLE: DWM Workspace
+#+AUTHOR: Vivek Raj
+#+DESCRIPTION: DWM Workspace Information
+#+STARTUP: showeverything
+#+OPTIONS: toc:3
+#+CAPTION: DWM Desktop Preview
+#+ATTR_ORG: :width 900
+[[file:Main.png]]
+
+* Table of Contents :toc:
+- [[#overview][Overview]]
+- [[#components][Components]]
+  - [[#dwm][DWM]]
+  - [[#dmenu][DMenu]]
+  - [[#dwmblocks][DWMBlocks]]
+- [[#build--install][Build & Install]]
+- [[#patches-included][Patches included]]
+- [[#configuration][Configuration]]
+- [[#dwm-config][DWM Config]]
+  - [[#appearance-and-behavior][Appearance and behavior]]
+  - [[#fonts-and-theme][Fonts and theme]]
+  - [[#tags][Tags]]
+  - [[#window-rules][Window rules]]
+  - [[#layouts][Layouts]]
+  - [[#autostart-commands][Autostart commands]]
+  - [[#spawn-commands][Spawn commands]]
+  - [[#keybindings][Keybindings]]
+- [[#images--screenshots][Images / Screenshots]]
+
+* Overview
+This workspace contains three Small Tools from suckless: a patched/packaged
+version of `dwm` (dynamic window manager), `dmenu` (dynamic menu) and
+`dwmblocks` (statusbar utility). The tree groups each project into its own
+directory and includes local patches and helper files.
+
+* Components
+** DWM
+- Location: [[file:DWM/dwm.c]]
+- Main build target: See [[file:DWM/Makefile]]
+
+** DMenu
+- Location: [[file:DMenu/dmenu.c]]
+- Main build target: See [[file:DMenu/Makefile]]
+
+** DWMBlocks
+- Location: [[file:DWMBlocks/dwmblocks.c]]
+- Main build target: See [[file:DWMBlocks/Makefile]]
+
+* Build & Install
+Use the project-specific Makefiles. Typical steps (run from repo root):
+
+#+BEGIN_SRC sh
+# Build and install dwm
+cd DWM && make
+sudo make install
+
+# Build and install dmenu
+cd ../DMenu && make
+sudo make install
+
+# Build and install dwmblocks
+cd ../DWMBlocks && make
+sudo make install
+#+END_SRC
+
+Notes:
+- Each project uses a `config.def.h` that is copied to `config.h` by
+	the Makefile; edit `config.def.h` or create a local `config.h` before
+	building if you need custom configuration.
+
+* Patches included
+This repository contains a set of optional patches for `dwm` and `dmenu`.
+Apply them from the respective subdirectories as desired.
+
+- DWM patches:
+	- [[file:DWM/patches/dwm-alwayscenter-20200625-f04cac6.diff]]
+	- [[file:DWM/patches/dwm-hide_vacant_tags-6.4.diff]]
+	- [[file:DWM/patches/dwm-rotatestack-20161021-ab9571b.diff]]
+	- [[file:DWM/patches/dwm-restartsig-20180523-6.2.diff]]
+	- [[file:DWM/patches/dwm-uselessgap-20211119-58414bee958f2.diff]]
+	- [[file:DWM/patches/dwm-notitle-6.2.diff]]
+
+- DMenu patches:
+	- [[file:DMenu/patches/dmenu-fuzzymatch-4.6.diff]]
+	- [[file:DMenu/patches/dmenu-highlight-20201211-fcdc159.diff]]
+	- [[file:DMenu/patches/dmenu-dracula-20211128-d78ff08.diff]]
+
+* Configuration
+- To change defaults, edit the `config.def.h` files in each project and
+	then run `make` to regenerate `config.h` and build the binaries.
+
+* DWM Config 
+This section documents the active settings and keybindings currently defined
+in your `dwm` configuration.
+
+** Appearance and behavior
+| Setting          | Value | Notes                              |
+|------------------+-------+------------------------------------|
+| `borderpx`       |     1 | Window border size in pixels       |
+| `gappx`          |     6 | Gap size between tiled windows     |
+| `snap`           |    32 | Snap distance                      |
+| `showbar`        |     1 | Status bar enabled                 |
+| `topbar`         |     1 | Bar shown at top                   |
+| `mfact`          |  0.55 | Master area factor                 |
+| `nmaster`        |     1 | Number of master clients           |
+| `resizehints`    |     0 | Ignore client size hints in tiling |
+| `lockfullscreen` |     1 | Keep focus on fullscreen client    |
+| `refreshrate`    |   120 | Move/resize update rate            |
+
+** Fonts and theme
+- `dmenufont`: `monospace:size=10`
+- Fonts:
+	- `Ubuntu:weight=bold:size=14:antialias=true:hinting=true`
+	- `Hack:size=8:antialias=true:autohint=true`
+	- `JoyPixels:size=10:antialias=true:autohint=true`
+- Color palette (Monokai-inspired):
+	- `col_gray1`: `#272822`
+	- `col_gray2`: `#3e3d32`
+	- `col_gray3`: `#f8f8f2`
+	- `col_gray4`: `#272822`
+	- `col_yellow`: `#e6db74`
+	- `col_cyan`: `#005577`
+
+** Tags
+- `` `󰾔` `` `` `` `` `` `` `󰋒`
+
+** Window rules
+| Class     | Instance | Title  | Tags mask | Floating | Monitor |
+|-----------+----------+--------+-----------+----------+---------|
+| `Gimp`    | `NULL`   | `NULL` | `0`       | `1`      | `-1`    |
+| `Firefox` | `NULL`   | `NULL` | `1 << 8`  | `0`      | `-1`    |
+| `rofi`    | `NULL`   | `NULL` | `0`       | `1`      | `-1`    |
+
+** Layouts
+| Symbol | Function          |
+|--------+-------------------|
+| `[]=`  | `tile`            |
+| `><>`  | `NULL` (floating) |
+| `[M]`  | `monocle`         |
+|        |                   |
+
+** Autostart commands
+- `nitrogen --restore`
+- `picom -f`
+- `dwmblocks`
+
+** Spawn commands
+- `dmenu`: `dmenu_run -m <monitor>`
+- `rofi`: `rofi -show drun`
+- `terminal`: `alacritty -e zsh`
+- Volume:
+	- `wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+`
+	- `wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-`
+	- `wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle`
+- Brightness:
+	- `/home/vivek/.local/bin/smooth_brightness +`
+	- `/home/vivek/.local/bin/smooth_brightness -`
+
+** Keybindings
+Modifier legend:
+- `MOD` = `Super` (`Mod4`)
+
+| Keys                    | Action                               |
+|-------------------------+--------------------------------------|
+| `MOD + d`               | Launch `rofi` app launcher           |
+| `MOD + Shift + d`       | Launch `dmenu_run`                   |
+| `MOD + Return`          | Launch terminal (`alacritty -e zsh`) |
+| `MOD + b`               | Toggle status bar                    |
+| `MOD + Shift + h`       | Rotate stack +1                      |
+| `MOD + Shift + l`       | Rotate stack -1                      |
+| `MOD + h`               | Focus next client                    |
+| `MOD + l`               | Focus previous client                |
+| `MOD + j`               | Shrink master area (`-0.05`)         |
+| `MOD + k`               | Grow master area (`+0.05`)           |
+| `MOD + Tab`             | Toggle to previous tag/view          |
+| `MOD + Shift + q`       | Kill focused client                  |
+| `MOD + t`               | Tile layout                          |
+| `MOD + f`               | Floating layout                      |
+| `MOD + m`               | Monocle layout                       |
+| `MOD + space`           | Cycle layouts                        |
+| `MOD + Shift + space`   | Toggle floating for focused client   |
+| `MOD + 0`               | View all tags                        |
+| `MOD + Shift + 0`       | Tag focused client on all tags       |
+| `MOD + comma`           | Focus previous monitor               |
+| `MOD + period`          | Focus next monitor                   |
+| `MOD + Shift + comma`   | Send client to previous monitor      |
+| `MOD + Shift + period`  | Send client to next monitor          |
+| `MOD + Shift + e`       | Quit `dwm`                           |
+| `MOD + Shift + r`       | Restart `dwm`                        |
+| `XF86AudioLowerVolume`  | Volume down                          |
+| `XF86AudioMute`         | Toggle mute                          |
+| `XF86AudioRaiseVolume`  | Volume up                            |
+| `XF86MonBrightnessUp`   | Brightness up                        |
+| `XF86MonBrightnessDown` | Brightness down                      |
+
+Tag bindings follow standard `TAGKEYS` for tags 1..9:
+- `MOD + [1..9]`: View tag
+- `MOD + Ctrl + [1..9]`: Toggle view of tag
+- `MOD + Shift + [1..9]`: Move focused client to tag
+- `MOD + Ctrl + Shift + [1..9]`: Toggle focused client on tag
+
+* Images / Screenshots
+Below are repository screenshots for quick reference.
+
+[[file:Main.png]]
+
+[[file:Editing.png]]
+
+[[file:Runner.png]]
+
+[[file:DWM/dwm.png]]
+
