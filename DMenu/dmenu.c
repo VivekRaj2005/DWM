@@ -25,12 +25,12 @@
 #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
-enum { SchemeNorm, SchemeSel, SchemeOut, SchemeLast }; /* color schemes */
-
+enum { SchemeNorm, SchemeSel, SchemeOut, SchemeNormHighlight, SchemeSelHighlight, SchemeOutHighlight, SchemeLast }; /* color schemes */
 struct item {
 	char *text;
 	struct item *left, *right;
 	int out;
+	int distance;
 };
 
 static char text[BUFSIZ] = "";
@@ -129,6 +129,43 @@ cistrstr(const char *h, const char *n)
 	return NULL;
 }
 
+static void
+drawhighlights(struct item *item, int x, int y, int maxw)
+{
+	char restorechar, tokens[sizeof text], *highlight,  *token;
+	int indentx, highlightlen;
+
+	drw_setscheme(drw, scheme[item == sel ? SchemeSelHighlight : item->out ? SchemeOutHighlight : SchemeNormHighlight]);
+	strcpy(tokens, text);
+	for (token = strtok(tokens, " "); token; token = strtok(NULL, " ")) {
+		highlight = fstrstr(item->text, token);
+		while (highlight) {
+			// Move item str end, calc width for highlight indent, & restore
+			highlightlen = highlight - item->text;
+			restorechar = *highlight;
+			item->text[highlightlen] = '\0';
+			indentx = TEXTW(item->text);
+			item->text[highlightlen] = restorechar;
+
+			// Move highlight str end, draw highlight, & restore
+			restorechar = highlight[strlen(token)];
+			highlight[strlen(token)] = '\0';
+			if (indentx - (lrpad / 2) - 1 < maxw)
+				drw_text(
+					drw,
+					x + indentx - (lrpad / 2) - 1,
+					y,
+					MIN(maxw - indentx, TEXTW(highlight) - lrpad),
+					bh, 0, highlight, 0
+				);
+			highlight[strlen(token)] = restorechar;
+
+			if (strlen(highlight) - strlen(token) < strlen(token)) break;
+			highlight = fstrstr(highlight + strlen(token), token);
+		}
+	}
+}
+
 static int
 drawitem(struct item *item, int x, int y, int w)
 {
@@ -139,7 +176,9 @@ drawitem(struct item *item, int x, int y, int w)
 	else
 		drw_setscheme(drw, scheme[SchemeNorm]);
 
-	return drw_text(drw, x, y, w, bh, lrpad / 2, item->text, 0);
+	int r = drw_text(drw, x, y, w, bh, lrpad / 2, item->text, 0);
+	drawhighlights(item, x, y, w);
+	return r;
 }
 
 static void
@@ -280,6 +319,84 @@ match(void)
 	calcoffsets();
 }
 
+static int
+compare_distance(const void *a, const void *b)
+{
+	struct item const *da = *(struct item **) a;
+	struct item const *db = *(struct item **) b;
+
+	if (!db)
+		return 1;
+	if (!da)
+		return -1;
+	return da->distance - db->distance;
+}
+
+static void
+fuzzymatch(void)
+{
+	struct item *item;
+	struct item **fuzzymatches = NULL;
+	char c;
+	int number_of_matches = 0, i, pidx, sidx, eidx;
+	int text_len = strlen(text), itext_len;
+
+	matches = matchend = NULL;
+
+	/* walk through all items */
+	for (item = items; item && item->text; item++) {
+		if (text_len) {
+			itext_len = strlen(item->text);
+			pidx = 0;
+			sidx = eidx = -1;
+			/* walk through item text */
+			for (i = 0; i < itext_len && (c = item->text[i]); i++) {
+				/* fuzzy match pattern */
+				if (text[pidx] == c) {
+					if (sidx == -1)
+						sidx = i;
+					pidx++;
+					if (pidx == text_len) {
+						eidx = i;
+						break;
+					}
+				}
+			}
+			/* build list of matches */
+			if (eidx != -1) {
+				/* compute distance */
+				/* factor in 30% of sidx and distance between eidx and total
+				 * text length .. let's see how it works */
+				item->distance = eidx - sidx + (itext_len - eidx + sidx) / 3;
+				appenditem(item, &matches, &matchend);
+				number_of_matches++;
+			}
+		}
+		else
+			appenditem(item, &matches, &matchend);
+	}
+
+	if (number_of_matches) {
+		/* initialize array with matches */
+		if (!(fuzzymatches = realloc(fuzzymatches, number_of_matches * sizeof(struct item*))))
+			die("cannot realloc %u bytes:", number_of_matches * sizeof(struct item *));
+		for (i = 0, item = matches; item && i < number_of_matches; i++, item = item->right)
+			fuzzymatches[i] = item;
+
+		/* sort matches according to distance */
+		qsort(fuzzymatches, number_of_matches, sizeof(struct item *), compare_distance);
+		/* rebuild list of matches */
+		matches = matchend = NULL;
+		for (i = 0, item = fuzzymatches[0]; i < number_of_matches && item && \
+				item->text; item = fuzzymatches[i], i++)
+			appenditem(item, &matches, &matchend);
+
+		free(fuzzymatches);
+	}
+	curr = sel = matches;
+	calcoffsets();
+}
+
 static void
 insert(const char *str, ssize_t n)
 {
@@ -290,7 +407,7 @@ insert(const char *str, ssize_t n)
 	if (n > 0)
 		memcpy(&text[cursor], str, n);
 	cursor += n;
-	match();
+	fuzzymatch();
 }
 
 static size_t
@@ -359,7 +476,7 @@ keypress(XKeyEvent *ev)
 
 		case XK_k: /* delete right */
 			text[cursor] = '\0';
-			match();
+			fuzzymatch();
 			break;
 		case XK_u: /* delete left */
 			insert(NULL, 0 - cursor);
@@ -519,7 +636,7 @@ insert:
 		cursor = strnlen(sel->text, sizeof text - 1);
 		memcpy(text, sel->text, cursor);
 		text[cursor] = '\0';
-		match();
+		fuzzymatch();
 		break;
 	}
 
@@ -678,7 +795,7 @@ setup(void)
 	}
 	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
 	inputw = mw / 3; /* input width: ~33% of monitor width */
-	match();
+	fuzzymatch();
 
 	/* create menu window */
 	swa.override_redirect = True;
